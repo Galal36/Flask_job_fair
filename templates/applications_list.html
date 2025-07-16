@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Applications - Job Portal{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Job Applications</h1>
+    
+    {% if applications %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Job Title</th>
+                        <th>Company</th>
+                        <th>Applicant</th>
+                        <th>Email</th>
+                        <th>Applied Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applications %}
+                    <tr>
+                        <td>{{ app.id }}</td>
+                        <td>{{ app.job_title }}</td>
+                        <td>{{ app.company }}</td>
+                        <td>{{ app.full_name }}</td>
+                        <td>{{ app.email }}</td>
+                        <td>{{ app.applied_date }}</td>
+                        <td>
+                            <a href="#" class="btn btn-sm btn-primary">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No applications have been submitted yet.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

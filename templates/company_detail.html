@@ -3,38 +3,28 @@
 {% block title %}{{ company.name }} - Job Portal{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/">Home</a></li>
-                <li class="breadcrumb-item"><a href="/companies">Companies</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{{ company.name }}</li>
-            </ol>
-        </nav>
-
-        <div class="card">
-            <div class="card-body">
-                <h1 class="card-title">{{ company.name }}</h1>
-                <h6 class="card-subtitle mb-3 text-muted">{{ company.industry }}</h6>
-                
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <p><strong>Location:</strong> {{ company.location }}</p>
-                        <p><strong>Employees:</strong> {{ company.employees_count }}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>Website:</strong> <a href="{{ company.website }}" target="_blank">{{ company.website }}</a></p>
-                    </div>
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-body">
+            <h1 class="card-title">{{ company.name }}</h1>
+            <h6 class="card-subtitle mb-3 text-muted">{{ company.industry }}</h6>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <p><strong>Location:</strong> {{ company.location }}</p>
+                    <p><strong>Employees:</strong> {{ company.employees_count }}</p>
                 </div>
-
-                <h5>About the Company</h5>
-                <p class="card-text">{{ company.description }}</p>
-
-                <div class="mt-4">
-                    <a href="/companies" class="btn btn-secondary">Back to Companies</a>
-                    <a href="/jobs" class="btn btn-primary">View Open Positions</a>
+                <div class="col-md-6">
+                    <p><strong>Website:</strong> <a href="{{ company.website }}" target="_blank">{{ company.website }}</a></p>
                 </div>
+            </div>
+
+            <h4>About the Company</h4>
+            <p class="card-text">{{ company.description }}</p>
+
+            <div class="mt-4">
+                <a href="{{ url_for('list_companies') }}" class="btn btn-secondary">Back to Companies</a>
+                <a href="{{ url_for('list_jobs') }}" class="btn btn-primary">View Open Positions</a>
             </div>
         </div>
     </div>

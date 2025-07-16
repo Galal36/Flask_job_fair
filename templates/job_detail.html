@@ -3,38 +3,28 @@
 {% block title %}{{ job.title }} - Job Portal{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/">Home</a></li>
-                <li class="breadcrumb-item"><a href="/jobs">Jobs</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{{ job.title }}</li>
-            </ol>
-        </nav>
-
-        <div class="card">
-            <div class="card-body">
-                <h1 class="card-title">{{ job.title }}</h1>
-                <h6 class="card-subtitle mb-3 text-muted">{{ job.company }}</h6>
-                
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <p><strong>Location:</strong> {{ job.location }}</p>
-                        <p><strong>Salary:</strong> {{ job.salary }}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>Posted Date:</strong> {{ job.posted_date.strftime('%Y-%m-%d') }}</p>
-                    </div>
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-body">
+            <h1 class="card-title">{{ job.title }}</h1>
+            <h6 class="card-subtitle mb-3 text-muted">{{ job.company }}</h6>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <p><strong>Location:</strong> {{ job.location }}</p>
+                    <p><strong>Salary:</strong> {{ job.salary }}</p>
                 </div>
-
-                <h5>Job Description</h5>
-                <p class="card-text">{{ job.description }}</p>
-
-                <div class="mt-4">
-                    <a href="/jobs" class="btn btn-secondary">Back to Jobs</a>
-                    <button class="btn btn-primary">Apply Now</button>
+                <div class="col-md-6">
+                    <p><strong>Posted Date:</strong> {{ job.posted_date }}</p>
                 </div>
+            </div>
+
+            <h4>Job Description</h4>
+            <p class="card-text">{{ job.description }}</p>
+
+            <div class="mt-4">
+                <a href="{{ url_for('list_jobs') }}" class="btn btn-secondary">Back to Jobs</a>
+                <a href="{{ url_for('apply_for_job', job_id=job.id) }}" class="btn btn-primary">Apply Now</a>
             </div>
         </div>
     </div>

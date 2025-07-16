@@ -1,143 +1,186 @@
-from flask import Flask, render_template, abort
+from flask import Flask, render_template, flash, redirect, url_for, request
+from flask_login import current_user
+from forms import JobApplicationForm
 from datetime import datetime
+import os
+from extensions import db, mail, login_manager
+from flask_bootstrap import Bootstrap
+from auth import auth  # Import the auth blueprint
+from models import User  # Import User model for the user_loader
+from flask_mail import Message
 
-app = Flask(__name__)
+# Initialize applications list
+applications = []  # In a real app, you would use a database
 
-# Configuration
-app.config['SECRET_KEY'] = 'your-secret-key-here'  # Change this to a secure secret key
+def send_password_reset_email(user):
+    app = Flask.current_app
+    try:
+        token = user.get_reset_password_token()
+        msg = Message('Password Reset Request',
+                    recipients=[user.email],
+                    subject='Password Reset Request')
+        reset_url = url_for('auth.reset_password', token=token, _external=True)
+        msg.body = f'''To reset your password, visit the following link:
+{reset_url}
 
-# Sample data
-jobs = [
-    {
-        'id': 1,
-        'title': 'Software Engineer',
-        'location': 'Cairo',
-        'company': 'Tech Company',
-        'salary': '$80,000 - $100,000',
-        'posted_date': datetime(2024, 3, 15),
-        'description': 'Looking for an experienced software engineer to join our team.'
-    },
-    {
-        'id': 2,
-        'title': 'Data Scientist',
-        'location': 'Alexandria',
-        'company': 'Data Corp',
-        'salary': '$90,000 - $110,000',
-        'posted_date': datetime(2024, 3, 14),
-        'description': 'Join our data science team to work on cutting-edge projects.'
-    },
-    {
-        'id': 3,
-        'title': 'Web Developer',
-        'location': 'Zagazig',
-        'company': 'Web Solutions',
-        'salary': '$70,000 - $90,000',
-        'posted_date': datetime(2024, 3, 13),
-        'description': 'Frontend and backend development position available.'
-    },
-    {
-        'id': 4,
-        'title': 'Mobile Developer',
-        'location': 'Cairo',
-        'company': 'App Innovations',
-        'salary': '$75,000 - $95,000',
-        'posted_date': datetime(2024, 3, 12),
-        'description': 'Looking for a skilled mobile developer to join our team.'
-    },
-    {
-        'id': 5,
-        'title': 'DevOps Engineer',
-        'location': 'Giza',
-        'company': 'Cloud Services',
-        'salary': '$85,000 - $105,000',
-        'posted_date': datetime(2024, 3, 11),
-        'description': 'Join our DevOps team to help manage our cloud infrastructure.'
-    }
-]
+If you did not make this request then simply ignore this email and no changes will be made.
 
-companies = [
-    {
-        'id': 1,
-        'name': 'Tech Company',
-        'location': 'Cairo',
-        'industry': 'Software Development',
-        'employees_count': 150,
-        'description': 'Leading software development company in Egypt.',
-        'website': 'https://techcompany.com'
-    },
-    {
-        'id': 2,
-        'name': 'Data Corp',
-        'location': 'Alexandria',
-        'industry': 'Data Analytics',
-        'employees_count': 75,
-        'description': 'Specialized in big data and analytics solutions.',
-        'website': 'https://datacorp.com'
-    },
-    {
-        'id': 3,
-        'name': 'Web Solutions',
-        'location': 'Zagazig',
-        'industry': 'Web Development',
-        'employees_count': 45,
-        'description': 'Full-service web development agency.',
-        'website': 'https://websolutions.com'
-    },
-    {
-        'id': 4,
-        'name': 'App Innovations',
-        'location': 'Cairo',
-        'industry': 'Mobile Development',
-        'employees_count': 60,
-        'description': 'Leading mobile app development company in Egypt.',
-        'website': 'https://appinnovations.com'
-    },
-    {
-        'id': 5,
-        'name': 'Cloud Services',
-        'location': 'Giza',
-        'industry': 'Cloud Computing',
-        'employees_count': 90,
-        'description': 'Leading cloud services provider in Egypt.',
-        'website': 'https://cloudservices.com'
-    }
-]
+This link will expire in 1 hour.
+'''
+        msg.html = f'''
+        <p>To reset your password, <a href="{reset_url}">click here</a>.</p>
+        <p>If you did not make this request then simply ignore this email and no changes will be made.</p>
+        <p>This link will expire in 1 hour.</p>
+        '''
+        mail.send(msg)
+        app.logger.info(f'Password reset email sent to {user.email}')
+        return True
+    except Exception as e:
+        app.logger.error(f'Failed to send email: {str(e)}')
+        app.logger.exception('Detailed error:')
+        return False
 
-# Error handlers
-@app.errorhandler(404)
-def page_not_found(e):
-    return render_template('404.html'), 404
+def create_app():
+    app = Flask(__name__)
 
-@app.errorhandler(500)
-def internal_server_error(e):
-    return render_template('500.html'), 500
+    # Configuration
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'your-secret-key-here'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Routes
-@app.route('/')
-def home():
-    return render_template('home.html', jobs=jobs[:3], companies=companies[:3])
+    # Email Configuration
+    app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+    app.config['MAIL_PORT'] = 587
+    app.config['MAIL_USE_TLS'] = True
+    app.config['MAIL_USE_SSL'] = False
+    app.config['MAIL_USERNAME'] = 'hungrypy@gmail.com'
+    app.config['MAIL_PASSWORD'] = 'kibn pekx logq qhmw'
+    app.config['MAIL_DEFAULT_SENDER'] = 'hungrypy@gmail.com'
+    app.config['MAIL_MAX_EMAILS'] = 5
+    app.config['MAIL_ASCII_ATTACHMENTS'] = False
+    app.config['MAIL_SUPPRESS_SEND'] = False
+    app.config['MAIL_DEBUG'] = True
 
-@app.route('/jobs')
-def list_jobs():
-    return render_template('jobs_list.html', jobs=jobs)
+    # Initialize extensions
+    db.init_app(app)
+    mail.init_app(app)
+    login_manager.init_app(app)
+    Bootstrap(app)
 
-@app.route('/jobs/<int:job_id>')
-def get_job(job_id):
-    job = next((job for job in jobs if job['id'] == job_id), None)
-    if job is None:
-        abort(404)
-    return render_template('job_detail.html', job=job)
+    # Register blueprints
+    app.register_blueprint(auth)
 
-@app.route('/companies')
-def list_companies():
-    return render_template('companies_list.html', companies=companies)
+    @login_manager.user_loader
+    def load_user(id):
+        return User.query.get(int(id))
 
-@app.route('/companies/<int:company_id>')
-def get_company(company_id):
-    company = next((company for company in companies if company['id'] == company_id), None)
-    if company is None:
-        abort(404)
-    return render_template('company_detail.html', company=company)
+    # Add this inside create_app() function, before your routes
+    jobs = [
+        {
+            'id': 1,
+            'title': 'Python Developer',
+            'company': 'Tech Company',
+            'location': 'Cairo',
+            'salary': '$3000-$4000',
+            'description': 'We are looking for a Python developer with experience in Flask and Django.',
+            'posted_date': '2023-05-15'
+        },
+        {
+            'id': 2,
+            'title': 'Data Analyst',
+            'company': 'Data Corp',
+            'location': 'Alexandria',
+            'salary': '$2500-$3500',
+            'description': 'Seeking a data analyst with strong SQL and visualization skills.',
+            'posted_date': '2023-05-10'
+        },
+        {
+            'id': 3,
+            'title': 'Frontend Developer',
+            'company': 'Web Solutions',
+            'location': 'Zagazig',
+            'salary': '$2000-$3000',
+            'description': 'Looking for a frontend developer with React experience.',
+            'posted_date': '2023-05-05'
+        },
+        {
+            'id': 4,
+            'title': 'Mobile App Developer',
+            'company': 'App Innovations',
+            'location': 'Cairo',
+            'salary': '$3500-$4500',
+            'description': 'Experienced mobile app developer needed for iOS and Android platforms.',
+            'posted_date': '2023-05-01'
+        },
+    ]
+
+    companies = [
+        {
+            'id': 1,
+            'name': 'Tech Company',
+            'location': 'Cairo',
+            'industry': 'Software Development',
+            'employees_count': 150,
+            'description': 'Leading software development company in Egypt.',
+            'website': 'https://techcompany.com'
+        },
+        {
+            'id': 2,
+            'name': 'Data Corp',
+            'location': 'Alexandria',
+            'industry': 'Data Analytics',
+            'employees_count': 75,
+            'description': 'Specialized in big data and analytics solutions.',
+            'website': 'https://datacorp.com'
+        },
+        {
+            'id': 3,
+            'name': 'Web Solutions',
+            'location': 'Zagazig',
+            'industry': 'Web Development',
+            'employees_count': 45,
+            'description': 'Full-service web development agency.',
+            'website': 'https://websolutions.com'
+        },
+        {
+            'id': 4,
+            'name': 'App Innovations',
+            'location': 'Cairo',
+            'industry': 'Mobile Development',
+            'employees_count': 60,
+            'description': 'Leading mobile app development company in Egypt.',
+            'website': 'https://appinnovations.com'
+        },
+    ]
+
+    @app.route('/')
+    def home():
+        return render_template('home.html', jobs=jobs[:3], companies=companies[:3])
+
+    @app.route('/jobs')
+    def list_jobs():
+        return render_template('jobs_list.html', jobs=jobs)
+
+    @app.route('/jobs/<int:job_id>')
+    def job_detail(job_id):
+        job = next((job for job in jobs if job['id'] == job_id), None)
+        if not job:
+            return render_template('404.html'), 404
+        return render_template('job_detail.html', job=job)
+
+    @app.route('/companies')
+    def list_companies():
+        return render_template('companies_list.html', companies=companies)
+
+    @app.route('/companies/<int:company_id>')
+    def company_detail(company_id):
+        company = next((company for company in companies if company['id'] == company_id), None)
+        if not company:
+            return render_template('404.html'), 404
+        return render_template('company_detail.html', company=company)
+
+    return app
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app = create_app()
+    app.run(debug=True)
